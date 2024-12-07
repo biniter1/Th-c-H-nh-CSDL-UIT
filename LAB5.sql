@@ -1,0 +1,318 @@
+--1. In ra danh sách (mã học viên, họ tên, ngày sinh, mã lớp) lớp trưởng của các lớp.
+	SELECT MAHV,HO,TEN,NGSINH,MALOP 
+	FROM HOCVIEN
+	WHERE MAHV IN (SELECT TRGLOP
+					FROM LOP)
+	--2. In ra bảng điểm khi thi (mã học viên, họ tên , lần thi, điểm số) môn CTRR của lớp “K12”, sắp xếp
+	--theo tên, họ học viên.
+	SELECT KQT.MAHV,HV.HO,HV.TEN,KQT.LANTHI,KQT.DIEM
+	FROM KETQUATHI KQT INNER JOIN HOCVIEN HV ON KQT.MAHV=HV.MAHV
+	WHERE KQT.MAMH='CTRR'  AND HV.MALOP='K12'
+	ORDER BY HV.TEN ASC ,HV.HO ASC 
+	--3. In ra danh sách những học viên (mã học viên, họ tên) và những môn học mà học viên đó thi lần thứ
+	--nhất đã đạt.
+	SELECT KQT.MAHV,HV.HO,HV.TEN,KQT.MAMH
+	FROM KETQUATHI KQT INNER JOIN HOCVIEN HV ON KQT.MAHV=HV.MAHV
+	WHERE KQT.LANTHI=1 AND KQT.KQUA='Dat'
+	--4. In ra danh sách học viên (mã học viên, họ tên) của lớp “K11” thi môn CTRR không đạt (ở lần thi 1).
+	SELECT KQT.MAHV,HV.HO,HV.TEN
+	FROM KETQUATHI KQT INNER JOIN HOCVIEN HV ON KQT.MAHV=HV.MAHV
+	WHERE KQT.MAMH='CTRR'  AND HV.MALOP='K11' AND  KQT.LANTHI=1 AND KQT.KQUA='Khong Dat'
+	--5. * Danh sách học viên (mã học viên, họ tên) của lớp “K” thi môn CTRR không đạt (ở tất cả các lần
+	--thi).
+	(SELECT KQT.MAHV,HV.HO,HV.TEN
+	FROM KETQUATHI KQT INNER JOIN HOCVIEN HV ON KQT.MAHV=HV.MAHV
+	WHERE KQT.MAMH='CTRR'  AND KQT.KQUA='Khong Dat' )
+	EXCEPT
+	(SELECT KQT.MAHV,HV.HO,HV.TEN
+	FROM KETQUATHI KQT INNER JOIN HOCVIEN HV ON KQT.MAHV=HV.MAHV
+	WHERE KQT.MAMH='CTRR'  AND KQT.KQUA='Dat')
+
+	SELECT DISTINCT KQT.MAHV,HO,TEN
+	FROM HOCVIEN HV JOIN KETQUATHI KQT ON HV.MAHV=KQT.MAHV
+	WHERE KQT.MAHV='CTRR' and MALOP LIKE 'K%' AND KQT.MAHV NOT IN (SELECT MAHV FROM KETQUATHI WHERE MAMH='CTRR' AND KQUA='Dat')
+	--6. Tìm tên những môn học mà giáo viên có tên “Tran Tam Thanh” dạy trong học kỳ 1 năm 2006.
+	SELECT MAMH,TENMH
+	FROM MONHOC
+	WHERE MAMH IN (SELECT MAMH
+					FROM GIANGDAY
+					WHERE HOCKY=1 AND NAM=2006 AND MAGV='GV02')
+
+	SELECT distinct GD.MAMH,MH.TENMH
+	FROM GIANGDAY GD JOIN GIAOVIEN GV ON GD.MAGV=GV.MAGV
+					JOIN MONHOC MH ON GD.MAMH=MH.MAMH
+	WHERE GV.HOTEN='Tran Tam Thanh' AND GD.HOCKY=1 AND GD.NAM=2006
+	--7. Tìm những môn học (mã môn học, tên môn học) mà giáo viên chủ nhiệm lớp “K11” dạy trong học
+	--kỳ 1 năm 2006.
+	SELECT MAMH,TENMH 
+	FROM MONHOC
+	WHERE MAMH IN( SELECT GD.MAMH
+					FROM GIANGDAY GD INNER JOIN LOP L ON GD.MAGV=L.MAGVCN
+					WHERE L.MALOP='K11' AND GD.HOCKY=1 AND GD.NAM=2006)
+
+	--8. Tìm họ tên lớp trưởng của các lớp mà giáo viên có tên “Nguyen To Lan” dạy môn “Co So Du Lieu”.
+	SELECT HO,TEN
+	FROM HOCVIEN 
+	WHERE MAHV IN (SELECT L.TRGLOP
+					FROM LOP L
+					WHERE L.MALOP IN (SELECT MALOP
+									  FROM GIANGDAY 
+									  WHERE MAGV='GV09' AND MAMH='CSDL'))
+	--9. In ra danh sách những môn học (mã môn học, tên môn học) phải học liền trước môn “Co So Du
+	--Lieu”.
+	SELECT MAMH,TENMH 
+	FROM MONHOC 
+	WHERE MAMH IN 
+					(SELECT MAMH_TRUOC
+					 FROM  DIEUKIEN
+					 WHERE MAMH='CSDL')
+	--10. Môn “Cau Truc Roi Rac” là môn bắt buộc phải học liền trước những môn học (mã môn học, tên
+	--môn học) nào.
+	SELECT MAMH,TENMH 
+	FROM MONHOC 
+	WHERE MAMH IN 
+					(SELECT MAMH
+					 FROM  DIEUKIEN
+					 WHERE MAMH_TRUOC='CTRR')
+	--11. Tìm họ tên giáo viên dạy môn CTRR cho cả hai lớp “K11” và “K12” trong cùng học kỳ 1 năm 2006.
+	SELECT HOTEN
+	FROM GIAOVIEN
+	WHERE MAGV IN(
+					(SELECT MAGV
+					FROM GIANGDAY 
+					WHERE MAMH='CTRR' AND MALOP='K11' AND HOCKY=1 AND NAM=2006)
+					INTERSECT
+					(SELECT MAGV
+					FROM GIANGDAY 
+					WHERE MAMH='CTRR' AND MALOP='K12' AND HOCKY=1 AND NAM=2006)
+					)
+	--12. Tìm những học viên (mã học viên, họ tên) thi không đạt môn CSDL ở lần thi thứ 1 nhưng chưa thi
+	--lại môn này.
+	SELECT MAHV,HO,TEN
+	FROM HOCVIEN
+	WHERE MAHV IN (
+					(SELECT MAHV 
+					FROM KETQUATHI
+					WHERE MAMH='CSDL' AND KQUA='Khong dat')
+					EXCEPT
+					(SELECT MAHV
+					FROM KETQUATHI
+					WHERE MAMH='CSDL' AND KQUA='Dat')
+					)
+	--13. Tìm giáo viên (mã giáo viên, họ tên) không được phân công giảng dạy bất kỳ môn học nào.
+	SELECT MAGV,HOTEN
+	FROM GIAOVIEN
+	WHERE MAGV IN (
+					(SELECT MAGV 
+					FROM GIAOVIEN)
+					EXCEPT
+					(SELECT DISTINCT MAGV
+					FROM GIANGDAY)
+					)
+
+	--14. Tìm giáo viên (mã giáo viên, họ tên) không được phân công giảng dạy bất kỳ môn học nào thuộc
+	--khoa giáo viên đó phụ trách.
+	SELECT MAGV,HOTEN
+	FROM GIAOVIEN
+	WHERE MAGV IN(
+	(SELECT DISTINCT GD.MAGV
+	FROM MONHOC MH INNER JOIN GIANGDAY GD ON MH.MAMH=GD.MAMH
+				   INNER JOIN GIAOVIEN GV ON GD.MAGV=GV.MAGV
+	WHERE MH.MAKHOA !=GV.MAKHOA)
+	UNION
+	(               (SELECT MAGV 
+					FROM GIAOVIEN)
+					EXCEPT
+					(SELECT DISTINCT MAGV
+					FROM GIANGDAY)
+					)
+					)
+	--15. Tìm họ tên các học viên thuộc lớp “K11” thi một môn bất kỳ quá 3 lần vẫn “Khong dat” hoặc thi lần
+	--thứ 2 môn CTRR được 5 điểm.
+	(SELECT HO,TEN
+	FROM HOCVIEN
+	WHERE MAHV IN (SELECT MAHV 
+				   FROM KETQUATHI
+					WHERE LANTHI=3 AND KQUA='Khong dat') AND MALOP='K11'
+	)
+	UNION
+	( SELECT HO,TEN
+	FROM HOCVIEN
+	WHERE MAHV IN (SELECT MAHV
+					FROM KETQUATHI
+					WHERE LANTHI=2 AND DIEM='5' AND MAMH='CTRR') AND MALOP='K11')
+	--16. Tìm họ tên giáo viên dạy môn CTRR cho ít nhất hai lớp trong cùng một học kỳ của một năm học.
+	SELECT HOTEN
+	FROM GIAOVIEN
+	WHERE MAGV IN(
+	SELECT GD1.MAGV
+	FROM GIANGDAY GD1
+	WHERE GD1.MAMH='CTRR'
+	GROUP BY GD1.MAGV
+	HAVING COUNT(GD1.MAGV)>=2)
+	--17. Danh sách học viên và điểm thi môn CSDL (chỉ lấy điểm của lần thi sau cùng).
+	SELECT  MAHV,DIEM
+	FROM KETQUATHI KQ1
+	WHERE MAMH='CSDL' AND NGTHI= (SELECT MAX(NGTHI)
+									FROM KETQUATHI	KQ2
+									WHERE MAMH='CSDL' AND KQ1.MAHV=KQ2.MAHV
+									)
+
+
+					
+	--18. Danh sách học viên và điểm thi môn “Co So Du Lieu” (chỉ lấy điểm cao nhất của các lần thi).
+	SELECT MAHV,MAX(DIEM) AS DIEMCAONHAT
+	FROM KETQUATHI
+	WHERE MAMH='CSDL'
+	GROUP BY MAHV
+	--19. Khoa nào (mã khoa, tên khoa) được thành lập sớm nhất.
+	SELECT TOP 1  WITH TIES MAKHOA,TENKHOA 
+	FROM KHOA
+	ORDER BY NGTLAP ASC
+	--20. Có bao nhiêu giáo viên có học hàm là “GS” hoặc “PGS”.
+	SELECT HOCHAM,COUNT(MAGV) AS SOLUONG
+	FROM GIAOVIEN
+	GROUP BY HOCHAM
+	HAVING HOCHAM='GS' OR HOCHAM='PGS'
+	--21. Thống kê có bao nhiêu giáo viên có học vị là “CN”, “KS”, “Ths”, “TS”, “PTS” trong mỗi khoa.
+	SELECT	MAKHOA,HOCVI,COUNT(MAGV) AS SOLUONG
+	FROM GIAOVIEN
+	GROUP BY HOCVI,MAKHOA
+	--22. Mỗi môn học thống kê số lượng học viên theo kết quả (đạt và không đạt).
+	SELECT MAMH,KQUA,COUNT(MAHV) AS SOLUONG
+	FROM KETQUATHI
+	GROUP BY MAMH,KQUA
+	--23. Tìm giáo viên (mã giáo viên, họ tên) là giáo viên chủ nhiệm của một lớp, đồng thời dạy cho lớp đó ít
+	--nhất một môn học.
+	SELECT GV.MAGV,GV.HOTEN
+	FROM GIAOVIEN GV 
+	WHERE GV.MAGV IN  (SELECT MAGV
+						FROM LOP L INNER JOIN GIANGDAY GD ON L.MAGVCN=GD.MAGV AND L.MALOP=GD.MALOP
+										 )
+				
+	--24. Tìm họ tên lớp trưởng của lớp có sỉ số cao nhất.
+	SELECT HO,TEN
+	FROM HOCVIEN
+	WHERE MAHV IN(
+	SELECT TOP 1 TRGLOP
+	FROM LOP
+	ORDER BY SISO DESC
+	)
+	--25. * Tìm họ tên những LOPTRG thi không đạt quá 3 môn (mỗi môn đều thi không đạt ở tất cả các lần
+	--thi).
+
+
+	SELECT A.HOTEN--,COUNT(*) AS SL
+	FROM KETQUATHI KQT JOIN (SELECT MAHV,HO+TEN AS HOTEN FROM LOP L JOIN HOCVIEN HV ON HV.MALOP=L.MALOP AND HV.MAHV=L.TRGLOP) AS A ON KQT.MAHV=A.MAHV
+	WHERE LANTHI=( SELECT MAX(KQT2.LANTHI)
+					FROM KETQUATHI KQT2
+					WHERE  KQT2.MAHV=KQT.MAHV AND KQT2.MAMH=KQT.MAMH
+					GROUP BY KQT2.MAHV,KQT2.MAMH) AND KQT.KQUA='Khong dat'
+	GROUP BY KQT.MAHV,A.HOTEN
+	HAVING COUNT(*)>3
+	--26. Tìm học viên (mã học viên, họ tên) có số môn đạt điểm 9,10 nhiều nhất.
+	SELECT TOP 1 WITH TIES HV.MAHV,HO,TEN	
+	FROM HOCVIEN HV INNER JOIN (SELECT MAHV,COUNT(*) AS SOLAN
+								FROM KETQUATHI
+								WHERE DIEM>=9
+								GROUP BY MAHV) AS COUNTSV 
+					ON HV.MAHV=COUNTSV.MAHV
+	ORDER BY SOLAN DESC
+
+	SELECT HV.MAHV,HO+TEN AS HOTEN
+	FROM HOCVIEN HV INNER JOIN KETQUATHI KQT ON HV.MAHV=KQT.MAHV
+	WHERE KQT.DIEM BETWEEN 9 AND 10
+	GROUP BY HV.MAHV,HO+TEN
+	HAVING COUNT(*)>=ALL( SELECT COUNT(*)
+						  FROM HOCVIEN HV1 INNER JOIN KETQUATHI KQT1 ON HV1.MAHV=KQT1.MAHV
+						  WHERE KQT1.DIEM BETWEEN 9 AND 10
+						  GROUP BY KQT1.MAHV)
+
+
+	--27. Trong từng lớp, tìm học viên (mã học viên, họ tên) có số môn đạt điểm 9,10 nhiều nhất.
+	SELECT HV.MALOP,HV.MAHV,HV.HO,HV.TEN,COUNT(*) AS SL
+	FROM HOCVIEN HV INNER JOIN KETQUATHI KQT ON HV.MAHV=KQT.MAHV
+	WHERE KQT.DIEM BETWEEN 9 AND 10
+	GROUP BY HV.MALOP,HV.MAHV,HV.HO,HV.TEN
+	HAVING COUNT(*)>= ALL(SELECT COUNT(HV1.MAHV)
+						  FROM HOCVIEN HV1 INNER JOIN KETQUATHI KQT1 ON HV1.MAHV=KQT1.MAHV 
+						  WHERE HV.MALOP=HV1.MALOP AND KQT1.DIEM BETWEEN 9 AND 10
+						  GROUP BY HV1.MALOP,HV1.MAHV)
+	--28. Trong từng học kỳ của từng năm, mỗi giáo viên phân công dạy bao nhiêu môn học, bao nhiêu lớp.
+	SELECT MAGV,HOCKY,NAM,COUNT(MAMH) AS SOMON,COUNT(MALOP) AS SOLOP
+	FROM GIANGDAY 
+	GROUP BY MAGV,HOCKY,NAM
+	--29. Trong từng học kỳ của từng năm, tìm giáo viên (mã giáo viên, họ tên) giảng dạy nhiều nhất.
+	SELECT GV.MAGV,GV.HOTEN,COUNT(*) AS SL,NAM,HOCKY
+	FROM GIANGDAY GD JOIN GIAOVIEN GV ON GD.MAGV=GV.MAGV
+	GROUP BY NAM,HOCKY,GV.MAGV,GV.HOTEN
+	HAVING COUNT(GV.MAGV)>=ALL(SELECT COUNT(*)
+						 FROM GIANGDAY GD1 JOIN GIAOVIEN GV1 ON GD1.MAGV=GV1.MAGV
+						 WHERE GD1.HOCKY=GD.HOCKY AND GD1.NAM=GD.NAM
+						 GROUP BY GD1.NAM,GD1.HOCKY,GV1.MAGV)
+	--30. Tìm môn học (mã môn học, tên môn học) có nhiều học viên thi không đạt (ở lần thi thứ 1) nhất.
+	SELECT KQT.MAMH,TENMH
+	FROM KETQUATHI KQT INNER JOIN MONHOC MH ON KQT.MAMH=MH.MAMH
+	WHERE LANTHI=1 AND KQUA='Khong Dat'
+	GROUP BY KQT.MAMH,TENMH
+	HAVING COUNT(*) >= ALL( SELECT COUNT(*)
+							FROM KETQUATHI KQT1
+							WHERE KQT1.LANTHI=1 AND KQT1.KQUA='Khong Dat'
+							GROUP BY KQT1.MAMH)
+	--31. Tìm học viên (mã học viên, họ tên) thi môn nào cũng đạt (chỉ xét lần thi thứ 1).
+	(SELECT KQT.MAHV,HO+TEN AS HOTEN
+	FROM KETQUATHI KQT INNER JOIN HOCVIEN HV ON KQT.MAHV=HV.MAHV
+	WHERE LANTHI=1 AND KQUA='Dat')
+	EXCEPT
+	(
+	SELECT KQT.MAHV,HO+TEN AS HOTEN
+	FROM KETQUATHI KQT INNER JOIN HOCVIEN HV ON KQT.MAHV=HV.MAHV
+	WHERE LANTHI=1 AND KQUA='Khong Dat')
+	--32. * Tìm học viên (mã học viên, họ tên) thi môn nào cũng đạt (chỉ xét lần thi sau cùng).
+	(SELECT KQT.MAHV,HO+TEN AS HOTEN
+	FROM KETQUATHI KQT INNER JOIN HOCVIEN HV ON KQT.MAHV=HV.MAHV
+	WHERE LANTHI=(SELECT MAX(LANTHI) FROM KETQUATHI KQT1 WHERE KQT1.MAHV=KQT.MAHV AND KQT1.MAMH=KQT.MAMH) AND KQUA='Dat')
+	EXCEPT
+	(
+	SELECT KQT.MAHV,HO+TEN AS HOTEN
+	FROM KETQUATHI KQT INNER JOIN HOCVIEN HV ON KQT.MAHV=HV.MAHV
+	WHERE LANTHI=(SELECT MAX(LANTHI) FROM KETQUATHI KQT1 WHERE KQT1.MAHV=KQT.MAHV AND KQT1.MAMH=KQT.MAMH) AND KQUA='Khong Dat')
+	--33. * Tìm học viên (mã học viên, họ tên) đã thi tất cả các môn đều đạt (chỉ xét lần thi thứ 1).
+	SELECT A.MAHV,HO+' '+TEN AS HOTEN
+	FROM HOCVIEN HV INNER JOIN (
+	(SELECT MAHV,COUNT(DISTINCT MAMH) AS SL_MON_THI
+	FROM KETQUATHI KQT
+	GROUP BY MAHV)
+	INTERSECT
+	(SELECT MAHV,COUNT(DISTINCT MAMH) AS SL_THI_DAT
+	FROM KETQUATHI KQT
+	WHERE LANTHI=1 AND KQUA='Dat'
+	GROUP BY MAHV)) AS A ON HV.MAHV=A.MAHV
+	--34. * Tìm học viên (mã học viên, họ tên) đã thi tất cả các môn đều đạt (chỉ xét lần thi sau cùng).
+	SELECT A.MAHV,HO+' '+TEN AS HOTEN
+	FROM HOCVIEN HV INNER JOIN (
+	(SELECT MAHV,COUNT(DISTINCT MAMH) AS SL_MON_THI
+	FROM KETQUATHI KQT
+	GROUP BY MAHV)
+	INTERSECT
+	(SELECT MAHV,COUNT(DISTINCT MAMH) AS SL_THI_DAT
+	FROM KETQUATHI KQT
+	WHERE LANTHI=(SELECT MAX(KQT1.LANTHI)
+				  FROM KETQUATHI KQT1
+				  WHERE KQT1.MAHV=KQT.MAHV AND KQT1.MAMH=KQT.MAMH) AND KQUA='Dat'
+	GROUP BY MAHV)) AS A ON HV.MAHV=A.MAHV
+
+
+
+	--35. ** Tìm học viên (mã học viên, họ tên) có điểm thi cao nhất trong từng môn (lấy điểm ở lần thi sau
+	--cùng).
+	SELECT KQT.MAHV,HO+TEN AS HOTEN
+	FROM KETQUATHI KQT INNER JOIN HOCVIEN HV ON KQT.MAHV=HV.MAHV
+	WHERE KQT.LANTHI=(SELECT MAX(KQT1.LANTHI)
+					  FROM KETQUATHI KQT1
+					  WHERE KQT1.MAHV=KQT.MAHV AND KQT1.MAMH=KQT.MAMH)
+	GROUP BY KQT.MAMH,KQT.MAHV,HO+TEN
+	HAVING MAX(KQT.DIEM)>= ALL(SELECT KQT1.DIEM
+						  FROM KETQUATHI KQT1
+						  WHERE KQT1.MAMH=KQT.MAMH
+						  )
